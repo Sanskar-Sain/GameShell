@@ -1,5 +1,5 @@
 // GameShell — preload script
-// Exposes a minimal API to the launcher and overlay via contextBridge.
+// Exposes a minimal API to the launcher via contextBridge.
 // No Node access leaks into the renderer.
 
 const { contextBridge, ipcRenderer } = require('electron');
@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('gameshell', {
 
   // Diagnostics
   openGpuInfo: () => ipcRenderer.invoke('open-gpu-info'),
+  getGpuStatus: () => ipcRenderer.invoke('get-gpu-status'),
 
   // Platform info
   getPlatform: () => ipcRenderer.invoke('get-platform'),

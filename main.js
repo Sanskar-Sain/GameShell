@@ -7,9 +7,7 @@ const {
   ipcMain,
   dialog,
   shell,
-  globalShortcut,
   powerSaveBlocker,
-  session,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -18,7 +16,7 @@ const fs = require('fs');
 // 0. Helpers
 // ---------------------------------------------------------------------------
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
 
 /** Resolve a path inside the app (works both in dev and packaged). */
 function appPath(...segments) {
@@ -33,9 +31,10 @@ function settingsPath() {
 /** Read settings.json; returns defaults when the file is missing. */
 function readSettings() {
   const defaults = {
-    vsync: true,
+    vsync: false, // Defaulting vsync to false gives unlocked framerate
     overlayDefault: false,
     fullscreenDefault: true,
+    highMemWasm: true,
     lastGameUrl: '',
   };
   try {
@@ -57,14 +56,16 @@ function writeSettings(settings) {
 function gamesJsonPath() {
   const userCopy = path.join(app.getPath('userData'), 'games.json');
   if (fs.existsSync(userCopy)) return userCopy;
-  // First launch or dev — use the bundled copy
   const bundled = appPath('games.json');
-  // For packaged builds, copy to userData so user edits persist
   if (app.isPackaged) {
     const res = path.join(process.resourcesPath, 'games.json');
     if (fs.existsSync(res)) {
-      fs.copyFileSync(res, userCopy);
-      return userCopy;
+      try {
+        fs.copyFileSync(res, userCopy);
+        return userCopy;
+      } catch {
+        return bundled;
+      }
     }
   }
   return bundled;
@@ -97,12 +98,13 @@ for (let i = 0; i < process.argv.length; i++) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. GPU & Chromium flags  (MUST be before app.whenReady)
+// 2. High-Performance GPU, Vulkan, WebGPU, and WASM Flags
+//    (MUST be applied before app.whenReady)
 // ---------------------------------------------------------------------------
 
 const settings = readSettings();
 
-// Core GPU flags
+// Core GPU acceleration flags
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
@@ -113,6 +115,29 @@ if (!settings.vsync) {
   app.commandLine.appendSwitch('disable-frame-rate-limit');
   app.commandLine.appendSwitch('disable-gpu-vsync');
 }
+
+// Uncap memory & WebAssembly compiler tiers for complex games (Cyberpunk 2077 web port)
+if (settings.highMemWasm) {
+  app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192 --wasm-tier-up');
+  app.commandLine.appendSwitch('disk-cache-size', '2147483648'); // 2GB shader/asset disk cache
+}
+
+// Enable Vulkan, WebGPU, SharedArrayBuffer and multi-threaded WASM compilation
+const features = [
+  'Vulkan',
+  'WebGPU',
+  'SharedArrayBuffer',
+  'WebAssemblyLazyCompilation',
+  'WebAssemblyTiering',
+];
+
+// Dawn (Chromium's WebGPU engine) optimizations
+app.commandLine.appendSwitch('enable-dawn-features', 'allow_unsafe_apis');
+
+// Prevent background throttling & stutter
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 // Disable unneeded Chromium subsystems
 app.commandLine.appendSwitch('disable-component-update');
@@ -128,42 +153,27 @@ app.commandLine.appendSwitch('disable-extensions');
 const platform = process.platform;
 
 if (platform === 'linux') {
-  // Wayland vs X11 detection
   const sessionType = process.env.XDG_SESSION_TYPE || '';
   const waylandDisplay = process.env.WAYLAND_DISPLAY || '';
 
   if (sessionType === 'wayland' || waylandDisplay) {
     app.commandLine.appendSwitch('ozone-platform', 'wayland');
-    console.log('[GameShell] Wayland session detected — using ozone-platform=wayland');
+    console.log('[GameShell] Wayland session detected — using ozone-platform=wayland with hardware Vulkan & WebGPU');
   } else {
     app.commandLine.appendSwitch('ozone-platform', 'x11');
-    console.log('[GameShell] X11 session detected — using ozone-platform=x11');
+    console.log('[GameShell] X11 session detected — using ozone-platform=x11 with hardware Vulkan & WebGPU');
   }
 
-  // WebGPU + Vulkan features on Linux
-  if (sessionType === 'wayland' || waylandDisplay) {
-    // Wayland is not compatible with VulkanFromANGLE; use standard WebGPU only
-    app.commandLine.appendSwitch('enable-features', 'WebGPU');
-  } else {
-    // X11 supports full Vulkan pipeline
-    app.commandLine.appendSwitch(
-      'enable-features',
-      'Vulkan,WebGPU,VulkanFromANGLE,DefaultANGLEVulkan'
-    );
-  }
+  app.commandLine.appendSwitch('enable-features', features.join(','));
 
-  // Hint for hybrid-GPU laptops
   if (!process.env.DRI_PRIME) {
-    console.log(
-      '[GameShell] Tip: On hybrid-GPU laptops run with DRI_PRIME=1 or use `npm run start:dgpu`'
-    );
+    console.log('[GameShell] Tip: On hybrid-GPU laptops run with DRI_PRIME=1 or use `npm run start:dgpu`');
   }
 } else if (platform === 'win32') {
-  // Windows — D3D11 is the default; enable WebGPU via Dawn/D3D12
-  app.commandLine.appendSwitch('enable-features', 'Vulkan,WebGPU');
+  app.commandLine.appendSwitch('enable-features', features.join(','));
 } else if (platform === 'darwin') {
-  // macOS — Metal is automatic
-  app.commandLine.appendSwitch('enable-features', 'WebGPU');
+  // macOS uses Metal for WebGPU
+  app.commandLine.appendSwitch('enable-features', 'WebGPU,SharedArrayBuffer,WebAssemblyLazyCompilation,WebAssemblyTiering');
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +188,7 @@ let overlayVisible = false;
 function startPowerBlock() {
   if (powerBlockerId === null) {
     powerBlockerId = powerSaveBlocker.start('prevent-display-sleep');
+    console.log('[GameShell] powerSaveBlocker active (prevent-display-sleep)');
   }
 }
 
@@ -200,10 +211,10 @@ function createLauncherWindow() {
   }
 
   launcherWindow = new BrowserWindow({
-    width: 900,
-    height: 650,
-    minWidth: 600,
-    minHeight: 400,
+    width: 920,
+    height: 700,
+    minWidth: 640,
+    minHeight: 480,
     title: 'GameShell',
     backgroundColor: '#0d0d0d',
     autoHideMenuBar: true,
@@ -225,7 +236,6 @@ function createLauncherWindow() {
 
   launcherWindow.on('closed', () => {
     launcherWindow = null;
-    // If no game is running, quit
     if (!gameWindow || gameWindow.isDestroyed()) app.quit();
   });
 }
@@ -256,6 +266,7 @@ function createGameWindow(url) {
     autoHideMenuBar: true,
     show: false,
     webPreferences: {
+      // Game window has NO Node access and NO preload
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -266,7 +277,6 @@ function createGameWindow(url) {
 
   gameWindow.setMenuBarVisibility(false);
 
-  // Allowed origin for navigation
   let allowedOrigin = '';
   try {
     allowedOrigin = new URL(url).origin;
@@ -285,7 +295,6 @@ function createGameWindow(url) {
     }
   });
 
-  // Open external links (target=_blank) in system browser
   gameWindow.webContents.setWindowOpenHandler(({ url: openUrl }) => {
     try {
       if (allowedOrigin && new URL(openUrl).origin !== allowedOrigin) {
@@ -303,7 +312,6 @@ function createGameWindow(url) {
     injectOverlay();
   });
 
-  // Re-inject overlay when page loads or navigates
   gameWindow.webContents.on('dom-ready', () => {
     injectOverlay();
   });
@@ -313,7 +321,6 @@ function createGameWindow(url) {
     stopPowerBlock();
   });
 
-  // Register game-window shortcuts
   registerGameShortcuts();
 }
 
@@ -324,17 +331,18 @@ function createGameWindow(url) {
 function injectOverlay() {
   if (!gameWindow || gameWindow.isDestroyed()) return;
 
-  const overlayCSS = fs.readFileSync(appPath('overlay', 'overlay.css'), 'utf-8');
-  const overlayJS = fs.readFileSync(appPath('overlay', 'overlay.js'), 'utf-8');
+  try {
+    const overlayCSS = fs.readFileSync(appPath('overlay', 'overlay.css'), 'utf-8');
+    const overlayJS = fs.readFileSync(appPath('overlay', 'overlay.js'), 'utf-8');
 
-  gameWindow.webContents.insertCSS(overlayCSS);
-  gameWindow.webContents.executeJavaScript(overlayJS).catch(() => {});
+    gameWindow.webContents.insertCSS(overlayCSS);
+    gameWindow.webContents.executeJavaScript(overlayJS).catch(() => {});
 
-  // Sync initial visibility
-  const cmd = overlayVisible
-    ? `document.getElementById('gs-overlay')?.style.setProperty('display','block')`
-    : `document.getElementById('gs-overlay')?.style.setProperty('display','none')`;
-  gameWindow.webContents.executeJavaScript(cmd).catch(() => {});
+    const cmd = overlayVisible
+      ? `document.getElementById('gs-overlay')?.style.setProperty('display','block')`
+      : `document.getElementById('gs-overlay')?.style.setProperty('display','none')`;
+    gameWindow.webContents.executeJavaScript(cmd).catch(() => {});
+  } catch { /* ignore */ }
 }
 
 function toggleOverlay() {
@@ -358,19 +366,16 @@ function registerGameShortcuts() {
   gameWindow.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
 
-    // F11 → toggle fullscreen
     if (input.key === 'F11') {
       gameWindow.setFullScreen(!gameWindow.isFullScreen());
       event.preventDefault();
     }
 
-    // F3 → toggle overlay
     if (input.key === 'F3') {
       toggleOverlay();
       event.preventDefault();
     }
 
-    // Escape → back to launcher (with confirmation)
     if (input.key === 'Escape') {
       event.preventDefault();
       dialog
@@ -389,7 +394,6 @@ function registerGameShortcuts() {
         });
     }
 
-    // Ctrl+Shift+I → DevTools (dev only)
     if (isDev && input.control && input.shift && input.key === 'I') {
       gameWindow.webContents.toggleDevTools();
       event.preventDefault();
@@ -421,7 +425,6 @@ ipcMain.handle('remove-game', (_e, index) => {
 
 ipcMain.handle('launch-game', (_e, url) => {
   createGameWindow(url);
-  // Hide launcher
   if (launcherWindow && !launcherWindow.isDestroyed()) {
     launcherWindow.hide();
   }
@@ -434,6 +437,17 @@ ipcMain.handle('save-settings', (_e, newSettings) => {
   const merged = { ...current, ...newSettings };
   writeSettings(merged);
   return merged;
+});
+
+ipcMain.handle('get-gpu-status', () => {
+  const featureStatus = app.getGPUFeatureStatus();
+  return {
+    vulkan: featureStatus.vulkan === 'enabled_on' || featureStatus.vulkan === 'enabled',
+    webgpu: featureStatus.webgpu === 'enabled_on' || featureStatus.webgpu === 'enabled',
+    compositing: featureStatus.gpu_compositing,
+    platform: process.platform,
+    session: process.env.XDG_SESSION_TYPE || 'unknown',
+  };
 });
 
 ipcMain.handle('open-gpu-info', () => {
@@ -460,14 +474,12 @@ ipcMain.handle('get-platform', () => process.platform);
 
 app.whenReady().then(() => {
   if (directUrl) {
-    // Direct launch mode
     createGameWindow(directUrl);
   } else {
     createLauncherWindow();
   }
 
   app.on('activate', () => {
-    // macOS dock click
     if (!launcherWindow && !gameWindow) createLauncherWindow();
   });
 });
@@ -477,7 +489,6 @@ app.on('window-all-closed', () => {
   if (platform !== 'darwin') app.quit();
 });
 
-// Prevent new windows from spawning outside our control
 app.on('web-contents-created', (_event, contents) => {
   contents.setWindowOpenHandler(({ url: openUrl }) => {
     shell.openExternal(openUrl);

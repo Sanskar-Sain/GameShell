@@ -1,44 +1,40 @@
 // Electron GPU probe - outputs JSON with active GPU, WebGL, and WebGPU status
 const { app, BrowserWindow } = require('electron');
+const path = require('path');
 
 // Apply the same GPU flags as main.js
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('enable-unsafe-webgpu');
+app.commandLine.appendSwitch('enable-features', 'Vulkan,WebGPU');
 
 const sessionType = process.env.XDG_SESSION_TYPE || '';
 const waylandDisplay = process.env.WAYLAND_DISPLAY || '';
 if (process.platform === 'linux') {
   if (sessionType === 'wayland' || waylandDisplay) {
     app.commandLine.appendSwitch('ozone-platform', 'wayland');
-    app.commandLine.appendSwitch('enable-features', 'WebGPU');
   } else {
     app.commandLine.appendSwitch('ozone-platform', 'x11');
-    app.commandLine.appendSwitch('enable-features', 'Vulkan,WebGPU,VulkanFromANGLE,DefaultANGLEVulkan');
   }
-} else {
-  app.commandLine.appendSwitch('enable-features', 'Vulkan,WebGPU');
 }
 
 app.whenReady().then(async () => {
   try {
-    const featureStatus = app.getGPUFeatureStatus();
     const gpuInfo = await app.getGPUInfo('basic').catch(() => ({}));
 
-    // Probe in-browser WebGL and WebGPU
     const win = new BrowserWindow({
       show: false,
-      width: 400,
-      height: 300,
+      width: 600,
+      height: 400,
       webPreferences: {
-        offscreen: true,
         contextIsolation: false,
         nodeIntegration: true,
       },
     });
 
-    await win.loadURL('about:blank');
+    const probeHtml = path.join(__dirname, '..', 'launcher', 'index.html');
+    await win.loadFile(probeHtml);
 
     const inBrowserInfo = await win.webContents.executeJavaScript(`
       (async () => {
@@ -48,7 +44,7 @@ app.whenReady().then(async () => {
           webgpu: false,
           glVendor: 'N/A',
           glRenderer: 'N/A',
-          gpuAdapter: 'N/A'
+          gpuAdapter: 'N/A',
         };
 
         try {
@@ -75,20 +71,25 @@ app.whenReady().then(async () => {
             const adapter = await navigator.gpu.requestAdapter();
             if (adapter) {
               result.webgpu = true;
-              if (adapter.info) {
-                result.gpuAdapter = (adapter.info.vendor || '') + ' ' + (adapter.info.architecture || adapter.info.device || '');
-              } else {
-                result.gpuAdapter = 'Available (Adapter acquired)';
-              }
+              const info = adapter.info || (adapter.requestAdapterInfo ? await adapter.requestAdapterInfo() : {});
+              result.gpuAdapter = ((info.vendor || '') + ' ' + (info.architecture || info.device || '')).trim() || 'Hardware Adapter (Available)';
+            } else {
+              result.gpuAdapter = 'Adapter unavailable';
             }
+          } else {
+            result.gpuAdapter = 'navigator.gpu not available';
           }
         } catch (e) {
-          result.gpuAdapterError = e.message;
+          result.gpuAdapter = 'Error: ' + e.message;
         }
 
         return result;
       })()
     `).catch((err) => ({ error: err.message }));
+
+    // Read feature status AFTER WebGPU adapter initialization
+    const featureStatus = app.getGPUFeatureStatus();
+    inBrowserInfo.vulkanActive = featureStatus.vulkan === 'enabled_on' || featureStatus.vulkan === 'enabled' || inBrowserInfo.webgpu;
 
     console.log('---GPU_PROBE_JSON_START---');
     console.log(JSON.stringify({

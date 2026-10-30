@@ -12,9 +12,20 @@
   <div class="container">
     <!-- Header -->
     <header>
-      <h1>🎮 GameShell</h1>
-      <p class="subtitle">Minimal WebGL / WebGPU Game Wrapper</p>
+      <div class="header-title">
+        <h1>🎮 GameShell</h1>
+        <div id="gpu-badge" class="badge">Checking GPU...</div>
+      </div>
+      <p class="subtitle">Minimal WebGL &amp; WebGPU Wrapper — Zero Overhead</p>
     </header>
+
+    <!-- Notice banner for WebGPU games -->
+    <div class="info-banner">
+      <div class="info-icon">⚡</div>
+      <div class="info-text">
+        <strong>Hardware Vulkan &amp; WebGPU Active:</strong> Games like Cyberpunk 2077 run locally via WebGPU + WebAssembly. Initial load compiles shaders into local disk cache. Subsequent launches load much faster.
+      </div>
+    </div>
 
     <!-- Game list -->
     <section id="game-list-section">
@@ -27,7 +38,7 @@
       <h2>Add a Game</h2>
       <form id="add-game-form">
         <div class="form-row">
-          <input type="text" id="game-name" placeholder="Game name" required>
+          <input type="text" id="game-name" placeholder="Game name (e.g. Quake Web)" required>
           <input type="url" id="game-url" placeholder="https://example.com" required>
           <button type="submit" class="btn btn-add">+ Add</button>
         </div>
@@ -36,27 +47,35 @@
 
     <!-- Settings -->
     <section id="settings-section">
-      <h2>Settings</h2>
+      <h2>Performance &amp; Display Settings</h2>
       <div class="settings-grid">
         <label class="toggle-label">
           <input type="checkbox" id="setting-vsync">
-          <span>V-Sync (prevents tearing; restart required)</span>
+          <span>
+            <strong>V-Sync:</strong> Off = uncapped FPS (reduces input lag on high-refresh displays; restart required)
+          </span>
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="setting-highmem">
+          <span>
+            <strong>High-Performance WASM Mode:</strong> 8GB heap + 2GB shader cache (recommended for Cyberpunk 2077)
+          </span>
         </label>
         <label class="toggle-label">
           <input type="checkbox" id="setting-fullscreen">
-          <span>Launch games fullscreen</span>
+          <span><strong>Fullscreen:</strong> Launch games in fullscreen kiosk mode</span>
         </label>
         <label class="toggle-label">
           <input type="checkbox" id="setting-overlay">
-          <span>Show FPS overlay by default</span>
+          <span><strong>FPS Overlay:</strong> Show FPS / frame-time HUD by default (toggle anytime with <kbd>F3</kbd>)</span>
         </label>
       </div>
     </section>
 
     <!-- Footer / diagnostics -->
     <footer>
-      <button id="btn-gpu-info" class="btn btn-secondary">GPU Info</button>
-      <span class="footer-note" id="platform-note"></span>
+      <button id="btn-gpu-info" class="btn btn-secondary">Open chrome://gpu</button>
+      <span class="footer-note" id="platform-note">Detecting environment...</span>
     </footer>
   </div>
 

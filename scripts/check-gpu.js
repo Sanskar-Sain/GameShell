@@ -5,7 +5,6 @@
 const { execSync, spawnSync } = require('child_process');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
 
 console.log('╔═════════════════════════════════════════════════════════════╗');
 console.log('║                GameShell — GPU Diagnostics                  ║');
@@ -54,7 +53,6 @@ let probeData = null;
 
 try {
   const electronBin = path.join(__dirname, '..', 'node_modules', '.bin', 'electron');
-  // Pass --no-sandbox if necessary for environments without user namespaces
   const res = spawnSync(electronBin, ['--no-sandbox', probeScript], {
     encoding: 'utf-8',
     timeout: 10000,
@@ -74,11 +72,12 @@ try {
 
 if (probeData && probeData.inBrowserInfo) {
   const info = probeData.inBrowserInfo;
+  console.log(`Vulkan Backend  : ${info.vulkanActive ? '✅ Active (Hardware accelerated)' : '⚠️ Software or disabled'}`);
+  console.log(`WebGPU Support  : ${info.webgpu ? `✅ Enabled (${info.gpuAdapter})` : '⚠️ Not available or software fallback'}`);
   console.log(`WebGL 1 Support : ${info.webgl1 ? '✅ Enabled' : '❌ Disabled'}`);
   console.log(`WebGL 2 Support : ${info.webgl2 ? '✅ Enabled' : '❌ Disabled'}`);
   console.log(`GL Vendor       : ${info.glVendor}`);
   console.log(`GL Renderer     : ${info.glRenderer}`);
-  console.log(`WebGPU Support  : ${info.webgpu ? `✅ Enabled (${info.gpuAdapter})` : '⚠️ Not available or software fallback'}`);
 
   if (probeData.gpuInfo && probeData.gpuInfo.gpuDevice && probeData.gpuInfo.gpuDevice[0]) {
     const dev = probeData.gpuInfo.gpuDevice[0];
@@ -88,25 +87,25 @@ if (probeData && probeData.inBrowserInfo) {
   console.log('Engine probe: Run inside graphical desktop to inspect in-engine GL renderer.');
 }
 
-console.log('\n--- Applied Electron GPU Flags ---');
+console.log('\n--- Applied Performance & GPU Flags ---');
 console.log('  • --ignore-gpu-blocklist');
 console.log('  • --enable-gpu-rasterization');
 console.log('  • --enable-zero-copy');
 console.log('  • --enable-unsafe-webgpu');
+console.log('  • --enable-dawn-features=allow_unsafe_apis');
+console.log('  • --enable-features=Vulkan,WebGPU,SharedArrayBuffer,WebAssemblyLazyCompilation,WebAssemblyTiering');
+console.log('  • --js-flags="--max-old-space-size=8192 --wasm-tier-up" (8GB WASM heap)');
+console.log('  • --disk-cache-size=2147483648 (2GB shader & asset cache)');
 if (platform === 'linux') {
   const sessionType = process.env.XDG_SESSION_TYPE || '';
   const waylandDisplay = process.env.WAYLAND_DISPLAY || '';
   if (sessionType === 'wayland' || waylandDisplay) {
     console.log('  • --ozone-platform=wayland');
-    console.log('  • --enable-features=WebGPU');
   } else {
     console.log('  • --ozone-platform=x11');
-    console.log('  • --enable-features=Vulkan,WebGPU,VulkanFromANGLE,DefaultANGLEVulkan');
   }
-} else {
-  console.log('  • --enable-features=Vulkan,WebGPU');
 }
 
 console.log('\nTo verify visual GPU status:');
-console.log('  1. Launch GameShell (npm start) -> click "GPU Info"');
-console.log('  2. Review chrome://gpu for Graphics Feature Status\n');
+console.log('  1. Launch GameShell (npm start) -> click "Open chrome://gpu"');
+console.log('  2. Review "Graphics Feature Status" in the window\n');
