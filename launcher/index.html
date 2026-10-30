@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <title>GameShell — Launcher</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <h1>🎮 GameShell</h1>
+      <p class="subtitle">Minimal WebGL / WebGPU Game Wrapper</p>
+    </header>
+
+    <!-- Game list -->
+    <section id="game-list-section">
+      <h2>Games</h2>
+      <div id="game-list"></div>
+    </section>
+
+    <!-- Add game form -->
+    <section id="add-game-section">
+      <h2>Add a Game</h2>
+      <form id="add-game-form">
+        <div class="form-row">
+          <input type="text" id="game-name" placeholder="Game name" required>
+          <input type="url" id="game-url" placeholder="https://example.com" required>
+          <button type="submit" class="btn btn-add">+ Add</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Settings -->
+    <section id="settings-section">
+      <h2>Settings</h2>
+      <div class="settings-grid">
+        <label class="toggle-label">
+          <input type="checkbox" id="setting-vsync">
+          <span>V-Sync (prevents tearing; restart required)</span>
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="setting-fullscreen">
+          <span>Launch games fullscreen</span>
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="setting-overlay">
+          <span>Show FPS overlay by default</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Footer / diagnostics -->
+    <footer>
+      <button id="btn-gpu-info" class="btn btn-secondary">GPU Info</button>
+      <span class="footer-note" id="platform-note"></span>
+    </footer>
+  </div>
+
+  <script src="launcher.js"></script>
+</body>
+</html>

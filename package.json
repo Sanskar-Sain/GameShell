@@ -1,0 +1,71 @@
+{
+  "name": "gameshell",
+  "version": "1.0.0",
+  "description": "Minimal fullscreen Electron wrapper for WebGL/WebGPU browser games",
+  "main": "main.js",
+  "author": {
+    "name": "GameShell",
+    "email": "dev@gameshell.local"
+  },
+  "homepage": "https://github.com/gameshell/gameshell",
+  "desktopName": "gameshell.desktop",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "start:dgpu": "DRI_PRIME=1 electron .",
+    "dev": "NODE_ENV=development electron .",
+    "check-gpu": "node scripts/check-gpu.js",
+    "build:linux": "electron-builder --linux AppImage pacman",
+    "build:mac": "electron-builder --mac dmg",
+    "build:win": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.gameshell.app",
+    "productName": "GameShell",
+    "files": [
+      "main.js",
+      "preload.js",
+      "games.json",
+      "launcher/**/*",
+      "overlay/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "games.json",
+        "to": "games.json"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "pacman"
+      ],
+      "maintainer": "GameShell <dev@gameshell.local>",
+      "syncDesktopName": true,
+      "category": "Game",
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.games",
+      "icon": "build/icon.icns"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^35.7.5",
+    "electron-builder": "^26.0.0"
+  },
+  "allowScripts": {
+    "electron@35.7.5": true,
+    "electron-winstaller@5.4.0": true
+  }
+}

@@ -1,0 +1,17 @@
+/* GameShell — FPS / frame-time overlay */
+#gs-overlay {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 2147483647;
+  background: rgba(0, 0, 0, 0.65);
+  color: #0f0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: 4px;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
