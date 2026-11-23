@@ -1,17 +1,24 @@
-/* GameShell — FPS / frame-time overlay */
+/* GameShell — Cyberpunk FPS / Frame-Time HUD Overlay */
 #gs-overlay {
   position: fixed;
-  top: 8px;
-  left: 8px;
+  top: 12px;
+  left: 12px;
   z-index: 2147483647;
-  background: rgba(0, 0, 0, 0.65);
-  color: #0f0;
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 13px;
+  background: rgba(6, 8, 14, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #00ff9d;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   line-height: 1.4;
-  padding: 6px 10px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 240, 255, 0.15);
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+  text-shadow: 0 0 8px rgba(0, 255, 157, 0.6);
 }

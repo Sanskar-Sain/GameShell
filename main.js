@@ -591,7 +591,8 @@ ipcMain.handle('open-gpu-info', () => {
   const gpuWin = new BrowserWindow({
     width: 1000,
     height: 700,
-    title: 'GPU Info',
+    title: 'Local Hardware Diagnostics — chrome://gpu',
+    backgroundColor: '#07080d',
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,

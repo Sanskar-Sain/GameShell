@@ -8,66 +8,173 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta name="referrer" content="no-referrer">
-  <title>GameShell</title>
+  <title>GAMESHELL // RUNTIME</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="ambient-glow glow-cyan"></div>
+  <div class="ambient-glow glow-magenta"></div>
+
   <div class="container">
-    <!-- Header -->
+    <!-- Gamer Header -->
     <header>
-      <div class="header-row">
-        <h1>GameShell</h1>
-        <div id="gpu-badge" class="badge badge-info">Checking…</div>
+      <div class="header-top">
+        <div class="brand">
+          <div class="brand-icon">⚡</div>
+          <div class="brand-text">
+            <h1>GAMESHELL</h1>
+            <span class="brand-tag">WEBGPU RUNTIME // v1.1.0</span>
+          </div>
+        </div>
+        <div id="gpu-badge" class="hud-badge">
+          <span class="hud-dot"></span>
+          <span id="gpu-badge-text">SCANNING GPU...</span>
+        </div>
       </div>
-      <p class="subtitle">Minimal game wrapper · Zero overhead</p>
+      <p class="subtitle">MAXIMUM HARDWARE ACCELERATION · ZERO BROWSER OVERHEAD</p>
     </header>
 
-    <!-- Game list -->
+    <!-- Game Library Section -->
     <section id="game-list-section">
-      <div class="section-label">Library</div>
+      <div class="section-header">
+        <span class="cyber-bracket">[</span>
+        <span class="section-title">GAME LIBRARY</span>
+        <span class="cyber-bracket">]</span>
+        <span id="game-count" class="section-counter">0 GAMES</span>
+      </div>
       <div id="game-list"></div>
     </section>
 
-    <!-- Add game form -->
+    <!-- Add Game Section -->
     <section id="add-game-section">
-      <div class="section-label">Add Game</div>
+      <div class="section-header">
+        <span class="cyber-bracket">[</span>
+        <span class="section-title">DEPLOY NEW GAME</span>
+        <span class="cyber-bracket">]</span>
+      </div>
       <form id="add-game-form" autocomplete="off">
         <div class="form-row">
-          <input type="text" id="game-name" placeholder="Name" required maxlength="100" aria-label="Game name">
-          <input type="url" id="game-url" placeholder="https://…" required maxlength="2048" aria-label="Game URL">
-          <button type="submit" class="btn btn-primary">Add</button>
+          <div class="input-wrap">
+            <span class="input-prefix">NAME:</span>
+            <input type="text" id="game-name" placeholder="Title (e.g. Cyberpunk Web)" required maxlength="100" aria-label="Game name">
+          </div>
+          <div class="input-wrap input-wrap-url">
+            <span class="input-prefix">URL:</span>
+            <input type="url" id="game-url" placeholder="https://..." required maxlength="2048" aria-label="Game URL">
+          </div>
+          <button type="submit" class="btn btn-add">
+            <span>+ DEPLOY</span>
+          </button>
         </div>
       </form>
     </section>
 
-    <!-- Settings -->
+    <!-- Settings Section -->
     <section id="settings-section">
-      <div class="section-label">Settings</div>
+      <div class="section-header">
+        <span class="cyber-bracket">[</span>
+        <span class="section-title">ENGINE &amp; PERFORMANCE TUNING</span>
+        <span class="cyber-bracket">]</span>
+      </div>
       <div class="settings-grid">
-        <label class="toggle-label">
+        <label class="toggle-card">
+          <div class="toggle-info">
+            <span class="toggle-title">V-SYNC (UNLIMITED FRAMERATE)</span>
+            <span class="toggle-desc">Disables vertical sync for lowest input latency (requires restart)</span>
+          </div>
           <input type="checkbox" id="setting-vsync">
-          <span class="label-text"><strong>V-Sync</strong> — prevent tearing (restart needed)</span>
+          <span class="cyber-switch"></span>
         </label>
-        <label class="toggle-label">
+
+        <label class="toggle-card">
+          <div class="toggle-info">
+            <span class="toggle-title">HIGH-MEMORY WASM ENGINE</span>
+            <span class="toggle-desc">Allocates 8 GB memory heap + 2 GB shader cache for heavy WebGPU titles</span>
+          </div>
           <input type="checkbox" id="setting-highmem">
-          <span class="label-text"><strong>High-Mem WASM</strong> — 8 GB heap + 2 GB shader cache</span>
+          <span class="cyber-switch"></span>
         </label>
-        <label class="toggle-label">
+
+        <label class="toggle-card">
+          <div class="toggle-info">
+            <span class="toggle-title">KIOSK FULLSCREEN MODE</span>
+            <span class="toggle-desc">Launches games directly into borderless fullscreen (<kbd>F11</kbd> to toggle)</span>
+          </div>
           <input type="checkbox" id="setting-fullscreen">
-          <span class="label-text"><strong>Fullscreen</strong> — launch games in fullscreen</span>
+          <span class="cyber-switch"></span>
         </label>
-        <label class="toggle-label">
+
+        <label class="toggle-card">
+          <div class="toggle-info">
+            <span class="toggle-title">REAL-TIME FPS / FRAME-TIME HUD</span>
+            <span class="toggle-desc">In-game performance overlay enabled by default (<kbd>F3</kbd> in-game)</span>
+          </div>
           <input type="checkbox" id="setting-overlay">
-          <span class="label-text"><strong>FPS Overlay</strong> — show by default (<kbd>F3</kbd> to toggle)</span>
+          <span class="cyber-switch"></span>
         </label>
       </div>
     </section>
 
     <!-- Footer -->
     <footer>
-      <button id="btn-gpu-info" class="btn btn-ghost">GPU Info</button>
-      <span class="footer-note" id="platform-note">—</span>
+      <div class="footer-left">
+        <button id="btn-gpu-info" class="btn btn-diag">
+          <span class="diag-icon">⯌</span>
+          <span>GPU DIAGNOSTICS</span>
+        </button>
+        <span class="privacy-pill">🔒 100% On-Device · Zero Telemetry</span>
+      </div>
+      <div class="footer-right">
+        <span class="footer-note" id="platform-note">SYSTEM READY</span>
+      </div>
     </footer>
+  </div>
+
+  <!-- Hardware Diagnostics Cyber HUD Modal -->
+  <div id="diag-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="diag-icon-neon">⯌</span>
+          <span>HARDWARE ENGINE DIAGNOSTICS</span>
+        </div>
+        <button id="modal-close" class="btn-close" aria-label="Close">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="diag-banner">
+          <div class="diag-banner-icon">🛡️</div>
+          <div class="diag-banner-text">
+            <strong>Local Hardware Verification:</strong> This inspects your own computer's graphics hardware only. No data is ever transmitted, uploaded, or shared with anyone.
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-box">
+            <span class="stat-label">VULKAN ENGINE</span>
+            <span id="stat-vulkan" class="stat-value stat-active">CHECKING...</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">WEBGPU RUNTIME</span>
+            <span id="stat-webgpu" class="stat-value stat-active">CHECKING...</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">DISPLAY PROTOCOL</span>
+            <span id="stat-session" class="stat-value">CHECKING...</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">GPU COMPOSITING</span>
+            <span id="stat-compositing" class="stat-value">CHECKING...</span>
+          </div>
+        </div>
+
+        <div class="diag-actions">
+          <button id="btn-open-chrome-gpu" class="btn btn-chrome-gpu">
+            <span>OPEN DETAILED CHROME://GPU REPORT</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="launcher.js"></script>
