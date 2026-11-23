@@ -4,78 +4,69 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
-  <title>GameShell — Launcher</title>
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-src 'none'; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="referrer" content="no-referrer">
+  <title>GameShell</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <!-- Header -->
     <header>
-      <div class="header-title">
-        <h1>🎮 GameShell</h1>
-        <div id="gpu-badge" class="badge">Checking GPU...</div>
+      <div class="header-row">
+        <h1>GameShell</h1>
+        <div id="gpu-badge" class="badge badge-info">Checking…</div>
       </div>
-      <p class="subtitle">Minimal WebGL &amp; WebGPU Wrapper — Zero Overhead</p>
+      <p class="subtitle">Minimal game wrapper · Zero overhead</p>
     </header>
-
-    <!-- Notice banner for WebGPU games -->
-    <div class="info-banner">
-      <div class="info-icon">⚡</div>
-      <div class="info-text">
-        <strong>Hardware Vulkan &amp; WebGPU Active:</strong> Games like Cyberpunk 2077 run locally via WebGPU + WebAssembly. Initial load compiles shaders into local disk cache. Subsequent launches load much faster.
-      </div>
-    </div>
 
     <!-- Game list -->
     <section id="game-list-section">
-      <h2>Games</h2>
+      <div class="section-label">Library</div>
       <div id="game-list"></div>
     </section>
 
     <!-- Add game form -->
     <section id="add-game-section">
-      <h2>Add a Game</h2>
-      <form id="add-game-form">
+      <div class="section-label">Add Game</div>
+      <form id="add-game-form" autocomplete="off">
         <div class="form-row">
-          <input type="text" id="game-name" placeholder="Game name (e.g. Quake Web)" required>
-          <input type="url" id="game-url" placeholder="https://example.com" required>
-          <button type="submit" class="btn btn-add">+ Add</button>
+          <input type="text" id="game-name" placeholder="Name" required maxlength="100" aria-label="Game name">
+          <input type="url" id="game-url" placeholder="https://…" required maxlength="2048" aria-label="Game URL">
+          <button type="submit" class="btn btn-primary">Add</button>
         </div>
       </form>
     </section>
 
     <!-- Settings -->
     <section id="settings-section">
-      <h2>Performance &amp; Display Settings</h2>
+      <div class="section-label">Settings</div>
       <div class="settings-grid">
         <label class="toggle-label">
           <input type="checkbox" id="setting-vsync">
-          <span>
-            <strong>V-Sync:</strong> Off = uncapped FPS (reduces input lag on high-refresh displays; restart required)
-          </span>
+          <span class="label-text"><strong>V-Sync</strong> — prevent tearing (restart needed)</span>
         </label>
         <label class="toggle-label">
           <input type="checkbox" id="setting-highmem">
-          <span>
-            <strong>High-Performance WASM Mode:</strong> 8GB heap + 2GB shader cache (recommended for Cyberpunk 2077)
-          </span>
+          <span class="label-text"><strong>High-Mem WASM</strong> — 8 GB heap + 2 GB shader cache</span>
         </label>
         <label class="toggle-label">
           <input type="checkbox" id="setting-fullscreen">
-          <span><strong>Fullscreen:</strong> Launch games in fullscreen kiosk mode</span>
+          <span class="label-text"><strong>Fullscreen</strong> — launch games in fullscreen</span>
         </label>
         <label class="toggle-label">
           <input type="checkbox" id="setting-overlay">
-          <span><strong>FPS Overlay:</strong> Show FPS / frame-time HUD by default (toggle anytime with <kbd>F3</kbd>)</span>
+          <span class="label-text"><strong>FPS Overlay</strong> — show by default (<kbd>F3</kbd> to toggle)</span>
         </label>
       </div>
     </section>
 
-    <!-- Footer / diagnostics -->
+    <!-- Footer -->
     <footer>
-      <button id="btn-gpu-info" class="btn btn-secondary">Open chrome://gpu</button>
-      <span class="footer-note" id="platform-note">Detecting environment...</span>
+      <button id="btn-gpu-info" class="btn btn-ghost">GPU Info</button>
+      <span class="footer-note" id="platform-note">—</span>
     </footer>
   </div>
 

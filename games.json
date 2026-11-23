@@ -1,10 +1,14 @@
 [
   {
-    "name": "Cyberpunk 2077 (Web)",
-    "url": "https://cyberpunk2077.lol"
+    "name": "Memory Card Flip",
+    "url": "https://memorycardflipgame.netlify.app/"
   },
   {
-    "name": "HexGL",
-    "url": "https://hexgl.bkcore.com/play/"
+    "name": "Tic Tac Toe",
+    "url": "https://tictactoe-sanskar.netlify.app/"
+  },
+  {
+    "name": "Sudoku Master",
+    "url": "https://sudoku-master-rouge.vercel.app/"
   }
 ]

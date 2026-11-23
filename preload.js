@@ -1,24 +1,44 @@
-// GameShell — preload script
-// Exposes a minimal API to the launcher via contextBridge.
+// GameShell — preload script (production)
+// Exposes a minimal, type-safe API to the launcher via contextBridge.
 // No Node access leaks into the renderer.
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Whitelist of allowed IPC channels
+const ALLOWED_CHANNELS = new Set([
+  'get-games',
+  'add-game',
+  'remove-game',
+  'launch-game',
+  'get-settings',
+  'save-settings',
+  'open-gpu-info',
+  'get-gpu-status',
+  'get-platform',
+]);
+
+function safeInvoke(channel, ...args) {
+  if (!ALLOWED_CHANNELS.has(channel)) {
+    throw new Error(`Blocked IPC channel: ${channel}`);
+  }
+  return ipcRenderer.invoke(channel, ...args);
+}
+
 contextBridge.exposeInMainWorld('gameshell', {
   // Games
-  getGames: () => ipcRenderer.invoke('get-games'),
-  addGame: (game) => ipcRenderer.invoke('add-game', game),
-  removeGame: (index) => ipcRenderer.invoke('remove-game', index),
-  launchGame: (url) => ipcRenderer.invoke('launch-game', url),
+  getGames: () => safeInvoke('get-games'),
+  addGame: (game) => safeInvoke('add-game', game),
+  removeGame: (index) => safeInvoke('remove-game', index),
+  launchGame: (url) => safeInvoke('launch-game', url),
 
   // Settings
-  getSettings: () => ipcRenderer.invoke('get-settings'),
-  saveSettings: (s) => ipcRenderer.invoke('save-settings', s),
+  getSettings: () => safeInvoke('get-settings'),
+  saveSettings: (s) => safeInvoke('save-settings', s),
 
   // Diagnostics
-  openGpuInfo: () => ipcRenderer.invoke('open-gpu-info'),
-  getGpuStatus: () => ipcRenderer.invoke('get-gpu-status'),
+  openGpuInfo: () => safeInvoke('open-gpu-info'),
+  getGpuStatus: () => safeInvoke('get-gpu-status'),
 
   // Platform info
-  getPlatform: () => ipcRenderer.invoke('get-platform'),
+  getPlatform: () => safeInvoke('get-platform'),
 });

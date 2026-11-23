@@ -1,4 +1,5 @@
-// Electron GPU probe - outputs JSON with active GPU, WebGL, and WebGPU status
+// Electron GPU probe — outputs JSON with GPU, WebGL, and WebGPU status
+// Used by: npm run check-gpu
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
@@ -9,9 +10,9 @@ app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('enable-unsafe-webgpu');
 app.commandLine.appendSwitch('enable-features', 'Vulkan,WebGPU');
 
-const sessionType = process.env.XDG_SESSION_TYPE || '';
-const waylandDisplay = process.env.WAYLAND_DISPLAY || '';
 if (process.platform === 'linux') {
+  const sessionType = process.env.XDG_SESSION_TYPE || '';
+  const waylandDisplay = process.env.WAYLAND_DISPLAY || '';
   if (sessionType === 'wayland' || waylandDisplay) {
     app.commandLine.appendSwitch('ozone-platform', 'wayland');
   } else {
@@ -23,30 +24,28 @@ app.whenReady().then(async () => {
   try {
     const gpuInfo = await app.getGPUInfo('basic').catch(() => ({}));
 
+    // Create a minimal hidden window for probing — we need a renderer to
+    // test WebGL/WebGPU APIs. We load a blank data URL instead of any file.
     const win = new BrowserWindow({
       show: false,
-      width: 600,
-      height: 400,
+      width: 100,
+      height: 100,
       webPreferences: {
-        contextIsolation: false,
-        nodeIntegration: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
       },
     });
 
-    const probeHtml = path.join(__dirname, '..', 'launcher', 'index.html');
-    await win.loadFile(probeHtml);
+    await win.loadURL('data:text/html,<html></html>');
 
-    const inBrowserInfo = await win.webContents.executeJavaScript(`
-      (async () => {
+    const inBrowserInfo = await win.webContents
+      .executeJavaScript(
+        `(async () => {
         const result = {
-          webgl1: false,
-          webgl2: false,
-          webgpu: false,
-          glVendor: 'N/A',
-          glRenderer: 'N/A',
-          gpuAdapter: 'N/A',
+          webgl1: false, webgl2: false, webgpu: false,
+          glVendor: 'N/A', glRenderer: 'N/A', gpuAdapter: 'N/A',
         };
-
         try {
           const c1 = document.createElement('canvas');
           const gl1 = c1.getContext('webgl');
@@ -58,21 +57,18 @@ app.whenReady().then(async () => {
               result.glRenderer = gl1.getParameter(ext.UNMASKED_RENDERER_WEBGL);
             }
           }
-        } catch (e) {}
-
+        } catch {}
         try {
           const c2 = document.createElement('canvas');
-          const gl2 = c2.getContext('webgl2');
-          if (gl2) result.webgl2 = true;
-        } catch (e) {}
-
+          if (c2.getContext('webgl2')) result.webgl2 = true;
+        } catch {}
         try {
           if (navigator.gpu) {
             const adapter = await navigator.gpu.requestAdapter();
             if (adapter) {
               result.webgpu = true;
-              const info = adapter.info || (adapter.requestAdapterInfo ? await adapter.requestAdapterInfo() : {});
-              result.gpuAdapter = ((info.vendor || '') + ' ' + (info.architecture || info.device || '')).trim() || 'Hardware Adapter (Available)';
+              const info = adapter.info || {};
+              result.gpuAdapter = ((info.vendor || '') + ' ' + (info.architecture || info.device || '')).trim() || 'Available';
             } else {
               result.gpuAdapter = 'Adapter unavailable';
             }
@@ -82,21 +78,21 @@ app.whenReady().then(async () => {
         } catch (e) {
           result.gpuAdapter = 'Error: ' + e.message;
         }
-
         return result;
-      })()
-    `).catch((err) => ({ error: err.message }));
+      })()`
+      )
+      .catch((err) => ({ error: err.message }));
 
-    // Read feature status AFTER WebGPU adapter initialization
     const featureStatus = app.getGPUFeatureStatus();
-    inBrowserInfo.vulkanActive = featureStatus.vulkan === 'enabled_on' || featureStatus.vulkan === 'enabled' || inBrowserInfo.webgpu;
+    inBrowserInfo.vulkanActive =
+      featureStatus.vulkan === 'enabled_on' ||
+      featureStatus.vulkan === 'enabled' ||
+      inBrowserInfo.webgpu;
 
     console.log('---GPU_PROBE_JSON_START---');
-    console.log(JSON.stringify({
-      featureStatus,
-      gpuInfo,
-      inBrowserInfo,
-    }, null, 2));
+    console.log(
+      JSON.stringify({ featureStatus, gpuInfo, inBrowserInfo }, null, 2)
+    );
     console.log('---GPU_PROBE_JSON_END---');
 
     win.destroy();

@@ -1,137 +1,155 @@
-# 🎮 GameShell
+# GameShell
 
-A minimal, fullscreen Electron wrapper engineered specifically for WebGL and WebGPU browser games (such as the Cyberpunk 2077 web port by developer omonkeyzz) with near-zero browser overhead, ensuring maximum CPU, GPU, and memory resources go directly to the game.
+Minimal fullscreen Electron wrapper for WebGL & WebGPU browser games.  
+Strips away all browser chrome so nearly all CPU/GPU resources go to the game.
 
-**Supported platforms:** Linux (Arch, Debian, Fedora) · macOS · Windows
+**Platforms:** Linux · macOS · Windows
 
 ---
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 npm install
-
-# Run the launcher
 npm start
+```
 
-# Run with a specific URL directly (no launcher)
-npm start -- --url=https://cyberpunk2077.lol
+Launch a URL directly (skip the launcher):
 
-# Dev mode (Ctrl+Shift+I opens DevTools)
+```bash
+npm start -- --url=https://memorycardflipgame.netlify.app/
+```
+
+Dev mode (Ctrl+Shift+I opens DevTools):
+
+```bash
 npm run dev
+```
 
-# Linux: launch with discrete GPU on hybrid laptops
-npm run start:dgpu
+Linux hybrid-GPU laptops:
+
+```bash
+npm run start:dgpu          # launches with DRI_PRIME=1
 ```
 
 ## Keyboard Shortcuts
 
-| Key              | Action                                   |
-| ---------------- | ---------------------------------------- |
-| **F11**          | Toggle fullscreen                        |
-| **F3**           | Toggle live FPS & frame-time HUD         |
-| **Esc**          | Return to launcher (with confirmation)   |
-| **Ctrl+Shift+I** | Open DevTools (dev mode only)            |
+| Key            | Action                              |
+| -------------- | ----------------------------------- |
+| F11            | Toggle fullscreen                   |
+| F3             | Toggle FPS / frame-time overlay     |
+| Esc            | Return to launcher (with confirm)   |
+| Ctrl+Shift+I   | DevTools (dev mode only)           |
 
-## WebGPU & Cyberpunk 2077 Web Optimization
+## Default Games
 
-The Cyberpunk 2077 browser port is rendered **locally on your graphics card** using **WebGPU** and **WebAssembly (WASM)**. GameShell includes specific optimizations tailored for heavy WebGPU/WASM workloads:
+| Game              | URL                                           |
+| ----------------- | --------------------------------------------- |
+| Memory Card Flip  | https://memorycardflipgame.netlify.app/        |
+| Tic Tac Toe       | https://tictactoe-sanskar.netlify.app/          |
+| Sudoku Master     | https://sudoku-master-rouge.vercel.app/         |
 
-1. **Hardware Vulkan Backend for Dawn**: On Linux, Chromium's WebGPU engine (Dawn) requires native Vulkan to execute compute and render pipelines on your GPU. GameShell enables full Vulkan ICD hardware acceleration (`vulkan-intel` for Intel Iris Xe, `vulkan-radeon` for AMD, `nvidia-utils` for NVIDIA).
-2. **4 GB WebGPU Storage Buffers**: Unlocks maximum WebGPU adapter limits (`maxBufferSize: 4GB`, `maxStorageBufferBindingSize: 4GB`), allowing massive vertex and texture data without CPU thrashing.
-3. **8 GB High-Performance WASM Heap**: Configured with `--max-old-space-size=8192` and `--wasm-tier-up` to prevent out-of-memory crashes and GC stutter during high-intensity scenes.
-4. **2 GB Persistent Shader & Asset Disk Cache**: `--disk-cache-size=2147483648` caches compiled WebGPU WGSL shaders and game assets locally so subsequent game launches load dramatically faster.
-5. **Unlocked Framerate (Zero V-Sync Lag)**: V-Sync is disabled by default to eliminate input lag and frame pacing stutters on 120Hz/144Hz monitors.
-
-> 💡 **Initial Load Note**: On first launch, the game must download assets and compile shaders into the local cache. Once cached, loading times and frame pacing improve significantly.
+Add or remove games from the launcher UI.  
+Games are stored in `~/.config/gameshell/games.json` (Linux).
 
 ## Settings
 
-Settings are stored in `<userData>/settings.json` and can be adjusted directly from the launcher UI:
+Configured in the launcher Settings panel. Stored in `~/.config/gameshell/settings.json`.
 
-| Setting           | Default | Description |
-| ----------------- | ------- | ----------- |
-| `vsync`           | `false` | Unlocked framerate. Disable V-Sync for lowest input lag; enable to prevent tearing on 60Hz panels. |
-| `highMemWasm`     | `true`  | 8GB WASM heap + 2GB shader cache. Crucial for Cyberpunk 2077 web. |
-| `fullscreenDefault` | `true` | Launch games directly in fullscreen kiosk mode. |
-| `overlayDefault`  | `false` | Display FPS / frame-time HUD automatically on game launch. |
-| `lastGameUrl`     | `""`    | Remembered last played game. |
+| Setting            | Default | Note                                      |
+| ------------------ | ------- | ----------------------------------------- |
+| V-Sync             | OFF     | Uncapped FPS; restart required to change   |
+| High-Mem WASM      | ON      | 8 GB heap + 2 GB shader cache              |
+| Fullscreen         | ON      | Games launch in fullscreen by default       |
+| FPS Overlay        | OFF     | Toggle anytime with F3                     |
 
-## GPU Diagnostics & Verification
+## GPU & Performance
 
-### In-App Verification
-1. Launch GameShell (`npm start`).
-2. Check the top header badge: **⚡ Vulkan & WebGPU Active**.
-3. Click **Open chrome://gpu** to view the full Chromium GPU feature matrix:
-   - **Vulkan**: Enabled
-   - **WebGPU**: Enabled
-   - **Compositing**: Hardware Accelerated
+GameShell applies aggressive GPU flags before the app window opens:
 
-### CLI Verification (`npm run check-gpu`)
-Run our diagnostic suite anytime from the terminal:
+- `--ignore-gpu-blocklist` — force hardware acceleration
+- `--enable-gpu-rasterization` / `--enable-zero-copy`
+- `--enable-unsafe-webgpu` + `--enable-dawn-features=allow_unsafe_apis`
+- Vulkan + WebGPU + SharedArrayBuffer + WASM tiering enabled
+- Background throttling and vsync disabled (configurable)
+- Unused Chromium subsystems stripped (spellcheck, extensions, translate, sync)
+
+### Verify GPU
+
 ```bash
 npm run check-gpu
 ```
-Example output on Arch Linux (Intel Iris Xe):
-```
---- Probing Chromium Engine GPU / WebGL / WebGPU ---
-Vulkan Backend  : ✅ Active (Hardware accelerated)
-WebGPU Support  : ✅ Enabled (intel gen-12lp)
-WebGL 1 Support : ✅ Enabled
-WebGL 2 Support : ✅ Enabled
-GL Vendor       : Google Inc. (Intel)
-GL Renderer     : ANGLE (Intel, Mesa Intel(R) Iris(R) Xe Graphics (TGL GT2), OpenGL ES 3.2)
-Active Device ID: 0x9a49 (Vendor 0x8086)
-```
+
+Or click **GPU Info** in the launcher to open `chrome://gpu`.
 
 ## Per-OS Notes
 
-### Linux (Arch Linux tested)
-- **Wayland vs X11**: Automatically detected from `$XDG_SESSION_TYPE` and `$WAYLAND_DISPLAY`. Uses `--ozone-platform=wayland` natively with Vulkan & WebGPU enabled for Dawn.
-- **Hybrid GPUs (Intel + NVIDIA / AMD)**: Run `npm run start:dgpu` (sets `DRI_PRIME=1`) or use `prime-run npm start` on NVIDIA Optimus laptops.
-- **Vulkan Drivers**: Ensure your GPU's driver is installed (`sudo pacman -S vulkan-intel vulkan-icd-loader` for Intel, `vulkan-radeon` for AMD, or `nvidia-utils` for NVIDIA).
+### Linux
+
+- Wayland and X11 are auto-detected via `XDG_SESSION_TYPE` / `WAYLAND_DISPLAY`.
+- Vulkan is enabled on both display servers.
+- Hybrid-GPU laptops: `npm run start:dgpu` sets `DRI_PRIME=1`.
+- If you see the sandbox error, run with `--no-sandbox` or configure the SUID sandbox per [Electron docs](https://www.electronjs.org/docs/latest/tutorial/sandbox#linux-sandbox-suid).
 
 ### macOS
-- **Metal** is utilized automatically for WebGPU.
-- **App Nap** and display sleep are prevented while a game is running using `powerSaveBlocker`.
-- Build target: `npm run build:mac` (`.dmg`).
+
+- Metal is automatic for WebGPU.
+- `powerSaveBlocker` prevents App Nap and display sleep during gameplay.
 
 ### Windows
-- Uses DirectX 12 / Dawn for WebGPU and D3D11 for ANGLE WebGL.
-- For dual-GPU laptops, ensure GameShell is set to **High performance** in Windows Display Settings.
-- Build target: `npm run build:win` (NSIS installer).
 
-## Building Standalone Packages
+- D3D11 backend by default; Vulkan enabled via feature flags.
+- For best performance, set GameShell to **High performance** in Windows Settings → System → Display → Graphics.
+
+## Security
+
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true` on all windows.
+- Game window has **zero** Node/IPC access (no preload script).
+- Navigation is locked to the game's origin; other links open in the system browser.
+- All permission requests (camera, mic, geolocation) are denied.
+- CSP headers, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` injected.
+- IPC handlers validate and whitelist all inputs; preload uses a channel allowlist.
+- No `webviewTag`, no `allowRunningInsecureContent`, no `remote` module.
+- No API keys, tokens, or secrets anywhere in the codebase.
+
+## Build
 
 ```bash
-# Linux (generates AppImage and pacman package)
-npm run build:linux
-
-# macOS
-npm run build:mac
-
-# Windows
-npm run build:win
+npm run build:linux    # AppImage + pacman
+npm run build:mac      # dmg (run on macOS)
+npm run build:win      # nsis (run on Windows or cross-compile)
 ```
 
-Packaged output appears in `dist/`:
-- **AppImage**: `dist/GameShell-1.0.0.AppImage` (portable executable)
-- **Arch Pacman**: `dist/gameshell-1.0.0.pacman` (install with `sudo pacman -U dist/gameshell-1.0.0.pacman`)
+Linux outputs land in `dist/`.
 
-## Security Architecture
+## Project Structure
 
-- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
-- The game window has **zero** Node.js or Electron IPC access.
-- Navigation is strictly locked to the chosen game's origin; external links automatically open in your default system browser.
-- The launcher only loads local files with strict Content Security Policy.
+```
+main.js              Main process — window management, GPU flags, security
+preload.js           Secure IPC bridge for the launcher (channel allowlist)
+games.json           Default game list (copied to userData on first run)
+launcher/
+  index.html         Launcher UI
+  launcher.js        Renderer logic
+  style.css          Minimalist dark theme
+overlay/
+  overlay.js         FPS / frame-time HUD (injected into game page)
+  overlay.css         Overlay styles
+scripts/
+  check-gpu.js       CLI GPU diagnostics
+  gpu-probe.js       Headless Electron GPU probe
+  dev-run.sh         Dev launch helper
+build/
+  icon.png           App icon (512×512)
+  icon.ico           Windows icon
+```
 
 ## Limitations
 
-> **Honest Note:** GameShell strips away browser chrome overhead (tabs, URL bar, extensions, background sync) and applies extreme GPU & WASM optimization flags, but it **cannot exceed** the game's own code or hardware limits. Performance depends on:
-> - The game port's optimization (the Cyberpunk 2077 web port is experimental)
-> - Your GPU hardware (e.g. integrated Iris Xe vs dedicated RTX)
-> - Thermal headroom and available RAM
+- This wrapper removes browser overhead but cannot exceed what the game's own WebGL/WebGPU code allows.
+- WebGPU games require a compatible GPU and up-to-date drivers.
+- Some Wayland compositors may show a Vulkan surface warning in stderr — this is cosmetic and does not affect WebGPU functionality.
+- Cross-origin game iframes are blocked by design.
 
 ## License
 

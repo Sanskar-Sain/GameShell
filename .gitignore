@@ -11,3 +11,9 @@ out/
 settings.json
 .DS_Store
 Thumbs.db
+*.log
+npm-debug.log*
+.env
+.env.*
+*.pem
+*.key
