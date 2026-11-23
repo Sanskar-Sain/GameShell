@@ -1,15 +1,21 @@
 {
   "name": "gameshell",
   "version": "1.1.0",
-  "description": "Minimal fullscreen Electron wrapper for WebGL/WebGPU browser games",
+  "description": "Minimal fullscreen Electron runtime for WebGL & WebGPU browser games with zero overhead",
   "main": "main.js",
   "author": {
-    "name": "GameShell",
-    "email": "dev@gameshell.local"
+    "name": "Sanskar Sain",
+    "url": "https://github.com/Sanskar-Sain"
   },
-  "homepage": "https://github.com/gameshell/gameshell",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sanskar-Sain/GameShell.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Sanskar-Sain/GameShell/issues"
+  },
+  "homepage": "https://github.com/Sanskar-Sain/GameShell#readme",
   "license": "MIT",
-  "private": true,
   "scripts": {
     "start": "electron .",
     "start:dgpu": "DRI_PRIME=1 electron .",
@@ -20,7 +26,7 @@
     "build:win": "electron-builder --win nsis"
   },
   "build": {
-    "appId": "com.gameshell.app",
+    "appId": "com.sanskarsain.gameshell",
     "productName": "GameShell",
     "files": [
       "main.js",
@@ -40,7 +46,7 @@
         "AppImage",
         "pacman"
       ],
-      "maintainer": "GameShell <dev@gameshell.local>",
+      "maintainer": "Sanskar Sain <https://github.com/Sanskar-Sain>",
       "syncDesktopName": true,
       "category": "Game",
       "icon": "build/icon.png"
